@@ -54,7 +54,7 @@ jobs:
         with:
           sonar.scanner.force-deprecated-java-version: true
           # Additional arguments for the sonarcloud scanner
-        ref:
+        args:
             # Unique keys of your project and organization. You can find them in SonarCloud > Information (bottom-left menu)
             # mandatory
             -Dsonar.projectKey=devsecops.net.projectkey

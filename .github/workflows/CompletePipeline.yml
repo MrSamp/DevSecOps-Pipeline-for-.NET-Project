@@ -1,0 +1,59 @@
+name: DevSecOps Pipeline with SAST, SCA and ZAP
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+  workflow_dispatch:
+
+permissions:
+  pull-requests: read # allows SonarCloud to decorate PRs with analysis results
+
+jobs:
+  SAST_Analysis:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Analyze with SonarCloud
+
+        # You can pin the exact commit or the version.
+        # uses: SonarSource/sonarcloud-github-action@de2e56b42aa84d0b1c5b622644ac17e505c9a049
+        uses: SonarSource/sonarcloud-github-action@de2e56b42aa84d0b1c5b622644ac17e505c9a049
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}   # Generate a token on Sonarcloud.io, add it to the secrets of this repo with the name SONAR_TOKEN (Settings > Secrets > Actions > add new repository secret)
+        with:
+          sonar.scanner.force-deprecated-java-version: true
+          # Additional arguments for the sonarcloud scanner
+        args:
+            # Unique keys of your project and organization. You can find them in SonarCloud > Information (bottom-left menu)
+            # mandatory
+            -Dsonar.projectKey=devsecops.net.projectkey
+            -Dsonar.organization=devsecops-net
+
+  SCA_Analysis:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: RunSnyk to check for vulnerabilities
+        uses: snyk/actions/maven@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+  zap_scan:
+    runs-on: ubuntu-latest
+    name: Scan the web application
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          ref: master
+      - name: ZAP Scan
+        uses: zaproxy/action-baseline@v0.6.1
+        with:
+          docker_name: 'owasp/zap2docker-stable'
+          target: 'http://testphp.vulnweb.com/'
+          rules_file_name: '.zap/rules.tsv'
+          cmd_options: '-a'
